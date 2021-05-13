@@ -1,5 +1,5 @@
 all:
-	gcc -o sersw sersw.c
+	gcc -O -Wall -o sersw sersw.c
 	./sersw
 
 run:
