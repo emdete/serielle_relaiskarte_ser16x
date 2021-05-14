@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 	attr.c_oflag &= ~OPOST;
 	attr.c_cc[VMIN] = 4;
 	attr.c_cc[VTIME] = 1;
-	if ((tcsetattr(fd, TCSANOW, &attr)) < 0) {
+	if (tcsetattr(fd, TCSANOW, &attr) < 0) {
 		fprintf(stderr, "Error setting attributes: %s.\n", strerror(errno));
 		exit(1);
 	}
