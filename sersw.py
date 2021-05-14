@@ -10,6 +10,8 @@ class RelaisKarte(Serial):
 		self.timeout = .5
 		self.writeTimeout = .5
 		self.read(size=4, ) # read garbage from previous runs
+		self.read(size=4, ) # read garbage from previous runs
+		self.read(size=4, ) # read garbage from previous runs
 
 	def send_command(self, a, b, c):
 		buf = bytes([a, b, c, a ^ b ^ c, ])
