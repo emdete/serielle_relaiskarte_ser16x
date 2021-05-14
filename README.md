@@ -16,3 +16,7 @@ Die Karte hat eine serielle Schnittstelle über die sich mit einem einfachen Pro
 
 Entgegen der Dokumentation ist die Schnittstellengeschwindigkeit nicht 9600 sondern 19200 baud.
 
+## Todo
+
+Im Moment können nur Boards mit 8 Relais geschaltet werden, weil die Argumente an das Programm einstellig sind.
+

@@ -35,7 +35,7 @@ unsigned char* send_get(int fd, unsigned char* buf, int port, int state) {
 
 void help() {
 	printf(
-		"Benutzung: sersw <Gerätename> ([+-=](bit ...) ...)\n"
+		"Benutzung: sersw <Gerätename> ([+-=](relais ...) ...)\n"
 		"Beispiele:\n"
 		"Schalte Relais 1 ein, ohne die anderen zu ändern:\n"
 		"          sersw /dev/ttyUSB0 +1\n"
@@ -53,6 +53,7 @@ int main(int argc, char** argv) {
 	unsigned char state = 0;
 	struct termios attr;
 	unsigned char buf[4];
+	unsigned char port = 0x01; // TODO switch to 0x02 if bit >= 8
 
 	if (argc < 2) {
 		fprintf(stderr, "Not enough arguments.\n");
@@ -85,7 +86,7 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Error flushing: %s.\n", strerror(errno));
 		exit(1);
 	}
-	if (send_get(fd, buf, 0x01, state) == NULL) {
+	if (send_get(fd, buf, port, state) == NULL) {
 		exit(1);
 	}
 	state = buf[2];
@@ -115,7 +116,7 @@ int main(int argc, char** argv) {
 			break;
 		}
 	}
-	if (send_set(fd, buf, 0x01, state) == NULL) {
+	if (send_set(fd, buf, port, state) == NULL) {
 		exit(1);
 	}
 	exit(0);
