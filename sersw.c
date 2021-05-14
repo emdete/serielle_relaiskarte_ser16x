@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
 		case '-':
 			for (int i=1; i<strlen(argv[argi]); i++) {
 				int bit = argv[argi][i] - '1';
-				printf("Bit %d off\n", bit);
+				printf("Relais %d off\n", bit+1);
 				state &= ~(1<<bit);
 			}
 			break;
@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
 		case '+':
 			for (int i=1; i<strlen(argv[argi]); i++) {
 				int bit = argv[argi][i] - '1';
-				printf("Bit %d on\n", bit);
+				printf("Relais %d on\n", bit+1);
 				state |= 1<<bit;
 			}
 			break;
