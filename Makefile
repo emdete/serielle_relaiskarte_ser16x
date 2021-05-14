@@ -1,10 +1,11 @@
-all:
-	gcc -O -Wall -o sersw sersw.c
-	./sersw
-	./sersw /dev/ttyUSB0 = +1357 -15
+all: sersw
+
+sersw: sersw.c
 
 run:
 	python3 -u ./sersw.py
 
-dbg:
+dbg: sersw
+	./sersw
+	./sersw /dev/ttyUSB0 = +1357 -15
 
