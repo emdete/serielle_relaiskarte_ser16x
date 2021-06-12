@@ -52,17 +52,17 @@ class RelaisKarte(Serial):
 def main(port='/dev/ttyUSB0', baudrate=19200, *args):
 	r = RelaisKarte(port=port, baudrate=int(baudrate), )
 	r.all_off()
-	sleep(.6)
+	sleep(.4)
 	r.all_on()
-	sleep(.6)
+	sleep(.4)
 	r.set_on(0xf0)
-	sleep(.6)
+	sleep(.4)
 	r.set_on(0x0f)
-	sleep(.6)
+	sleep(.4)
 	for n in range(8):
 		r.set_on(1<<n)
 		r.get_on()
-		sleep(.6)
+		sleep(.4)
 	r.all_off()
 
 if __name__ == '__main__':
