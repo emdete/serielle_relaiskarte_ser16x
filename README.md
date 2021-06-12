@@ -24,6 +24,20 @@ Entgegen der Dokumentation ist die Schnittstellengeschwindigkeit nicht 9600 sond
 
 Das Protokoll ist sehr simpel und führt zu Fehlern, wenn es zB durch Nutzung der falschen Baud-Rate aus dem Tritt gerät, dann muss das Board neu gestartet werden, was nur durch unterbrechen der Versorgungsspannung möglich ist.
 
+## Serial RS232/v24 an DB9
+
+	1	DCD	In	Data Carrier Detect
+	2	RxD	In	Receive Data
+	3	TxD	Out	Transmit Data
+	4	DTR	Out	Data Terminal Ready
+	5	GND	-	Ground
+	6	DSR	In	Data Set Ready
+	7	RTS	Out	Request To Send
+	8	CTS	In	Clear To Send
+	9	RI	In	Ring Indicator
+
+Da der Prozessor ab&zu abstürzt wollen wir ihr resetten können. Ein Reset-Pin hat er. Ich überlege, ob wir den Reset mit einer der Status-Leitungen der RS232 auslösen können (DTR oder RTS).
+
 ## Todo
 
 Im Moment können nur Boards mit 8 Relais geschaltet werden, weil die Argumente an das Programm einstellig sind.
