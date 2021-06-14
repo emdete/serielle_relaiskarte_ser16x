@@ -6,6 +6,9 @@ class RelaisKarte(Serial):
 	def __init__(self, **kwargs):
 		super(RelaisKarte, self).__init__(**kwargs)
 		self.rtscts = False
+		self.dsrdtr=False
+		self.rts = False
+		self.dtr = False
 		self.xonxoff = False
 		self.timeout = .5
 		self.writeTimeout = .5

@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 #include <errno.h>
 #include <stdlib.h>
 
-unsigned char* send_command(int fd, unsigned char* buf, unsigned char a, unsigned char b, unsigned char c) {
+static unsigned char* send_command(int fd, unsigned char* buf, unsigned char a, unsigned char b, unsigned char c) {
 	buf[0] = a;
 	buf[1] = b;
 	buf[2] = c;
@@ -25,12 +26,12 @@ unsigned char* send_command(int fd, unsigned char* buf, unsigned char a, unsigne
 	return buf;
 }
 
-unsigned char* send_set(int fd, unsigned char* buf, int port, int state) {
+static unsigned char* send_set(int fd, unsigned char* buf, int port, int state) {
 	return send_command(fd, buf, 0x01, port, state);
 }
 
-unsigned char* send_get(int fd, unsigned char* buf, int port, int state) {
-	return send_command(fd, buf, 0x02, port, state);
+static unsigned char* send_get(int fd, unsigned char* buf, int port) {
+	return send_command(fd, buf, 0x02, port, 0);
 }
 
 void help() {
@@ -50,7 +51,7 @@ void help() {
 
 int main(int argc, char** argv) {
 	int fd = -1;
-	unsigned char state = 0;
+	unsigned int state = 0;
 	struct termios attr;
 	unsigned char buf[4];
 	unsigned char port = 0x01; // TODO switch to 0x02 if bit >= 8
@@ -67,26 +68,40 @@ int main(int argc, char** argv) {
 	tcgetattr(fd, &attr);
 	cfsetispeed(&attr, B19200);
 	cfsetospeed(&attr, B19200);
+	// control
 	attr.c_cflag &= ~PARENB;
 	attr.c_cflag &= ~CSTOPB;
 	attr.c_cflag &= ~CSIZE;
 	attr.c_cflag |= CS8;
 	attr.c_cflag &= ~CRTSCTS;
 	attr.c_cflag |= CREAD | CLOCAL;
+	// in
 	attr.c_iflag &= ~(IXON | IXOFF | IXANY);
 	attr.c_iflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+	// out
 	attr.c_oflag &= ~OPOST;
+	// control caracters
 	attr.c_cc[VMIN] = 4;
 	attr.c_cc[VTIME] = 1;
 	if (tcsetattr(fd, TCSANOW, &attr) < 0) {
 		fprintf(stderr, "Error setting attributes: %s.\n", strerror(errno));
 		exit(1);
 	}
-	if (tcflush(fd, TCIFLUSH) < 0) {
+	state = TIOCM_DTR;
+	if (ioctl(fd, TIOCMBIC, &state) < 0) {
+		fprintf(stderr, "Error setting DTR off: %s.\n", strerror(errno));
+		exit(1);
+	}
+	state = TIOCM_RTS;
+	if (ioctl(fd, TIOCMBIC, &state) < 0) {
+		fprintf(stderr, "Error setting RTS off: %s.\n", strerror(errno));
+		exit(1);
+	}
+	if (tcflush(fd, TCIOFLUSH) < 0) {
 		fprintf(stderr, "Error flushing: %s.\n", strerror(errno));
 		exit(1);
 	}
-	if (send_get(fd, buf, port, state) == NULL) {
+	if (send_get(fd, buf, port) == NULL) {
 		exit(1);
 	}
 	state = buf[2];
@@ -109,6 +124,15 @@ int main(int argc, char** argv) {
 				printf("Relais %d on\n", bit+1);
 				state |= 1<<bit;
 			}
+			break;
+		case 'r':
+			printf("Reset\n");
+			state = TIOCM_DTR; ioctl(fd, TIOCMBIS, &state);
+			sleep(1);
+			//state = TIOCM_RTS; ioctl(fd, TIOCMBIS, &state);
+			state = TIOCM_DTR; ioctl(fd, TIOCMBIC, &state);
+			state = TIOCM_RTS; ioctl(fd, TIOCMBIC, &state);
+			sleep(1);
 			break;
 		default:
 			fprintf(stderr, "Wrong argument.\n");
