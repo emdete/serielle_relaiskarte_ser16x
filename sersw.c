@@ -8,6 +8,10 @@
 #include <stdlib.h>
 
 static unsigned char* send_command(int fd, unsigned char* buf, unsigned char a, unsigned char b, unsigned char c) {
+	fd_set rfds;
+	struct timeval tv;
+	int retval;
+
 	buf[0] = a;
 	buf[1] = b;
 	buf[2] = c;
@@ -18,9 +22,27 @@ static unsigned char* send_command(int fd, unsigned char* buf, unsigned char a, 
 		fprintf(stderr, "Error reading: %s.\n", strerror(errno));
 		return NULL;
 	}
-	if (read(fd, buf, 4) != 4) {
-		fprintf(stderr, "Error writing: %s.\n", strerror(errno));
+	FD_ZERO(&rfds);
+	FD_SET(fd, &rfds);
+	tv.tv_sec = 1;
+	tv.tv_usec = 0;
+	retval = select(1, &rfds, NULL, NULL, &tv);
+	if (retval < 0) {
+		fprintf(stderr, "Error selecting: %s.\n", strerror(errno));
 		return NULL;
+	}
+	else if (retval) {
+		printf("Data is available now.\n");
+	}
+	else {
+		printf("No data within five seconds.\n");
+		return NULL;
+	}
+	if (FD_ISSET(fd, &rfds)) {
+		if (read(fd, buf, 4) != 4) {
+			fprintf(stderr, "Error reading: %s.\n", strerror(errno));
+			return NULL;
+		}
 	}
 	printf("Return %02x %02x %02x %02x.\n", buf[0], buf[1], buf[2], buf[3]);
 	return buf;
@@ -32,6 +54,21 @@ static unsigned char* send_set(int fd, unsigned char* buf, int port, int state) 
 
 static unsigned char* send_get(int fd, unsigned char* buf, int port) {
 	return send_command(fd, buf, 0x02, port, 0);
+}
+
+static unsigned char* reset(int fd) {
+	int state;
+	printf("Reset\n");
+	state = TIOCM_DTR;
+	ioctl(fd, TIOCMBIS, &state);
+	//state = TIOCM_RTS;
+	//ioctl(fd, TIOCMBIS, &state);
+	sleep(1);
+	state = TIOCM_DTR;
+	ioctl(fd, TIOCMBIC, &state);
+	state = TIOCM_RTS;
+	ioctl(fd, TIOCMBIC, &state);
+	sleep(1);
 }
 
 void help() {
@@ -55,15 +92,16 @@ int main(int argc, char** argv) {
 	struct termios attr;
 	unsigned char buf[4];
 	unsigned char port = 0x01; // TODO switch to 0x02 if bit >= 8
+	int retries = 3;
 
 	if (argc < 2) {
 		fprintf(stderr, "Not enough arguments.\n");
 		help();
-		exit(0);
-	}
-	if ((fd = open(argv[1], O_RDWR | O_NOCTTY)) < 0) {
-		fprintf(stderr, "Error opening the device: %s.\n", strerror(errno));
 		exit(1);
+	}
+	if ((fd = open(argv[1], O_RDWR | O_NOCTTY)) < 0) { // O_NONBLOCK?
+		fprintf(stderr, "Error opening the device '%s': %s.\n", argv[1], strerror(errno));
+		exit(2);
 	}
 	tcgetattr(fd, &attr);
 	cfsetispeed(&attr, B19200);
@@ -85,24 +123,30 @@ int main(int argc, char** argv) {
 	attr.c_cc[VTIME] = 1;
 	if (tcsetattr(fd, TCSANOW, &attr) < 0) {
 		fprintf(stderr, "Error setting attributes: %s.\n", strerror(errno));
-		exit(1);
+		exit(3);
 	}
 	state = TIOCM_DTR;
 	if (ioctl(fd, TIOCMBIC, &state) < 0) {
 		fprintf(stderr, "Error setting DTR off: %s.\n", strerror(errno));
-		exit(1);
+		exit(4);
 	}
 	state = TIOCM_RTS;
 	if (ioctl(fd, TIOCMBIC, &state) < 0) {
 		fprintf(stderr, "Error setting RTS off: %s.\n", strerror(errno));
-		exit(1);
+		exit(5);
 	}
 	if (tcflush(fd, TCIOFLUSH) < 0) {
 		fprintf(stderr, "Error flushing: %s.\n", strerror(errno));
-		exit(1);
+		exit(6);
 	}
 	if (send_get(fd, buf, port) == NULL) {
-		exit(1);
+		if (retries--) {
+			reset(fd);
+		}
+		else {
+			reset(fd);
+			exit(7);
+		}
 	}
 	state = buf[2];
 	for (int argi = 2; argi < argc; argi++) {
@@ -125,23 +169,14 @@ int main(int argc, char** argv) {
 				state |= 1<<bit;
 			}
 			break;
-		case 'r':
-			printf("Reset\n");
-			state = TIOCM_DTR; ioctl(fd, TIOCMBIS, &state);
-			sleep(1);
-			//state = TIOCM_RTS; ioctl(fd, TIOCMBIS, &state);
-			state = TIOCM_DTR; ioctl(fd, TIOCMBIC, &state);
-			state = TIOCM_RTS; ioctl(fd, TIOCMBIC, &state);
-			sleep(1);
-			break;
 		default:
 			fprintf(stderr, "Wrong argument.\n");
-			exit(1);
+			exit(8);
 			break;
 		}
 	}
 	if (send_set(fd, buf, port, state) == NULL) {
-		exit(1);
+		exit(9);
 	}
 	exit(0);
 }
