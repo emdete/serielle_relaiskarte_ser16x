@@ -26,7 +26,7 @@ static unsigned char* send_command(int fd, unsigned char* buf, unsigned char a, 
 	FD_SET(fd, &rfds);
 	tv.tv_sec = 1;
 	tv.tv_usec = 0;
-	retval = select(1, &rfds, NULL, NULL, &tv);
+	retval = select(fd+1, &rfds, NULL, NULL, &tv);
 	if (retval < 0) {
 		fprintf(stderr, "Error selecting: %s.\n", strerror(errno));
 		return NULL;
@@ -38,7 +38,7 @@ static unsigned char* send_command(int fd, unsigned char* buf, unsigned char a, 
 		printf("No data within five seconds.\n");
 		return NULL;
 	}
-	if (FD_ISSET(fd, &rfds)) {
+	if (FD_ISSET(fd, &rfds)) {*/
 		if (read(fd, buf, 4) != 4) {
 			fprintf(stderr, "Error reading: %s.\n", strerror(errno));
 			return NULL;
@@ -107,15 +107,10 @@ int main(int argc, char** argv) {
 	cfsetispeed(&attr, B19200);
 	cfsetospeed(&attr, B19200);
 	// control
-	attr.c_cflag &= ~PARENB;
-	attr.c_cflag &= ~CSTOPB;
-	attr.c_cflag &= ~CSIZE;
-	attr.c_cflag |= CS8;
-	attr.c_cflag &= ~CRTSCTS;
-	attr.c_cflag |= CREAD | CLOCAL;
+	attr.c_cflag &= ~(PARENB | CSTOPB | CSIZE | CRTSCTS);
+	attr.c_cflag |= (CS8 | CREAD | CLOCAL);
 	// in
-	attr.c_iflag &= ~(IXON | IXOFF | IXANY);
-	attr.c_iflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+	attr.c_iflag &= ~(IXON | IXOFF | IXANY | ICANON | ECHO | ECHOE | ISIG);
 	// out
 	attr.c_oflag &= ~OPOST;
 	// control caracters
@@ -126,7 +121,7 @@ int main(int argc, char** argv) {
 		exit(3);
 	}
 	state = TIOCM_DTR;
-	if (ioctl(fd, TIOCMBIC, &state) < 0) {
+	/*if (ioctl(fd, TIOCMBIC, &state) < 0) {
 		fprintf(stderr, "Error setting DTR off: %s.\n", strerror(errno));
 		exit(4);
 	}
@@ -134,7 +129,7 @@ int main(int argc, char** argv) {
 	if (ioctl(fd, TIOCMBIC, &state) < 0) {
 		fprintf(stderr, "Error setting RTS off: %s.\n", strerror(errno));
 		exit(5);
-	}
+	}*/
 	if (tcflush(fd, TCIOFLUSH) < 0) {
 		fprintf(stderr, "Error flushing: %s.\n", strerror(errno));
 		exit(6);
