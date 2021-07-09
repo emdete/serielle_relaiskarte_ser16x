@@ -7,14 +7,14 @@
 #include <errno.h>
 #include <stdlib.h>
 
-static unsigned char* send_command(int fd, unsigned char* buf, unsigned char a, unsigned char b, unsigned char c) {
+static unsigned char* send_command(int fd, unsigned char* buf, unsigned char command, unsigned char port, unsigned char state) {
 	fd_set rfds;
 	struct timeval tv;
 	int retval;
 
-	buf[0] = a;
-	buf[1] = b;
-	buf[2] = c;
+	buf[0] = command;
+	buf[1] = port;
+	buf[2] = state;
 	buf[3] = buf[0] ^ buf[1] ^ buf[2];
 	printf("Sending %02x %02x %02x %02x.\n", buf[0], buf[1], buf[2], buf[3]);
 	fflush(stdout);
@@ -38,7 +38,7 @@ static unsigned char* send_command(int fd, unsigned char* buf, unsigned char a, 
 		printf("No data within five seconds.\n");
 		return NULL;
 	}
-	if (FD_ISSET(fd, &rfds)) {*/
+	if (FD_ISSET(fd, &rfds)) {
 		if (read(fd, buf, 4) != 4) {
 			fprintf(stderr, "Error reading: %s.\n", strerror(errno));
 			return NULL;
@@ -57,17 +57,17 @@ static unsigned char* send_get(int fd, unsigned char* buf, int port) {
 }
 
 static unsigned char* reset(int fd) {
-	int state;
+	int ready_state;
 	printf("Reset\n");
-	state = TIOCM_DTR;
-	ioctl(fd, TIOCMBIS, &state);
-	//state = TIOCM_RTS;
-	//ioctl(fd, TIOCMBIS, &state);
+	ready_state = TIOCM_DTR;
+	ioctl(fd, TIOCMBIS, &ready_state);
+	//ready_state = TIOCM_RTS;
+	//ioctl(fd, TIOCMBIS, &ready_state);
 	sleep(1);
-	state = TIOCM_DTR;
-	ioctl(fd, TIOCMBIC, &state);
-	state = TIOCM_RTS;
-	ioctl(fd, TIOCMBIC, &state);
+	ready_state = TIOCM_DTR;
+	ioctl(fd, TIOCMBIC, &ready_state);
+	ready_state = TIOCM_RTS;
+	ioctl(fd, TIOCMBIC, &ready_state);
 	sleep(1);
 }
 
@@ -89,6 +89,7 @@ void help() {
 int main(int argc, char** argv) {
 	int fd = -1;
 	unsigned int state = 0;
+	unsigned int ready_state = 0;
 	struct termios attr;
 	unsigned char buf[4];
 	unsigned char port = 0x01; // TODO switch to 0x02 if bit >= 8
@@ -120,16 +121,16 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Error setting attributes: %s.\n", strerror(errno));
 		exit(3);
 	}
-	state = TIOCM_DTR;
-	/*if (ioctl(fd, TIOCMBIC, &state) < 0) {
+	ready_state = TIOCM_DTR;
+	if (ioctl(fd, TIOCMBIC, &ready_state) < 0) {
 		fprintf(stderr, "Error setting DTR off: %s.\n", strerror(errno));
 		exit(4);
 	}
-	state = TIOCM_RTS;
-	if (ioctl(fd, TIOCMBIC, &state) < 0) {
+	ready_state = TIOCM_RTS;
+	if (ioctl(fd, TIOCMBIC, &ready_state) < 0) {
 		fprintf(stderr, "Error setting RTS off: %s.\n", strerror(errno));
 		exit(5);
-	}*/
+	}
 	if (tcflush(fd, TCIOFLUSH) < 0) {
 		fprintf(stderr, "Error flushing: %s.\n", strerror(errno));
 		exit(6);
