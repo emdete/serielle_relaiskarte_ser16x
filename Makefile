@@ -10,6 +10,6 @@ run: sersw
 	./sersw /dev/ttyUSB0 =
 
 dbg:
-	$(foreach remote,$(shell git remote),$(shell git push $(remote)))
+	$(foreach remote,$(shell git remote),$(shell git push --tags $(remote)))
 	true
 
