@@ -56,9 +56,20 @@ static unsigned char* send_get(int fd, unsigned char* buf, int port) {
 	return send_command(fd, buf, 0x02, port, 0);
 }
 
-static unsigned char* reset(int fd) {
+static unsigned char* send_all_on(int fd, unsigned char* buf, int port) {
+	return send_command(fd, buf, 0x03, port, 0);
+}
+
+static unsigned char* send_all_off(int fd, unsigned char* buf, int port) {
+	return send_command(fd, buf, 0x04, port, 0);
+}
+
+static unsigned char* reset(int fd, unsigned char* buf, int port) {
 	int ready_state;
 	printf("Reset\n");
+	if (1) {
+		return send_all_off(fd, buf, port);
+	}
 	ready_state = TIOCM_DTR;
 	ioctl(fd, TIOCMBIS, &ready_state);
 	//ready_state = TIOCM_RTS;
@@ -135,44 +146,51 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Error flushing: %s.\n", strerror(errno));
 		exit(6);
 	}
-	if (send_get(fd, buf, port) == NULL) {
-		if (retries--) {
-			reset(fd);
-		}
-		else {
-			reset(fd);
-			exit(7);
+	if (argc == 2) {
+		if (send_all_off(fd, buf, port) == NULL) {
+			exit(1);
 		}
 	}
-	state = buf[2];
-	for (int argi = 2; argi < argc; argi++) {
-		switch (argv[argi][0]) {
-		case '-':
-			for (int i=1; i<strlen(argv[argi]); i++) {
-				int bit = argv[argi][i] - '1';
-				printf("Relais %d off\n", bit+1);
-				state &= ~(1<<bit);
+	else {
+		if (send_get(fd, buf, port) == NULL) {
+			if (retries--) {
+				reset(fd, buf, port);
 			}
-			break;
-		case '=':
-			state = 0;
-			printf("All off\n");
-			// fall through:
-		case '+':
-			for (int i=1; i<strlen(argv[argi]); i++) {
-				int bit = argv[argi][i] - '1';
-				printf("Relais %d on\n", bit+1);
-				state |= 1<<bit;
+			else {
+				reset(fd, buf, port);
+				exit(7);
 			}
-			break;
-		default:
-			fprintf(stderr, "Wrong argument.\n");
-			exit(8);
-			break;
 		}
-	}
-	if (send_set(fd, buf, port, state) == NULL) {
-		exit(9);
+		state = buf[2];
+		for (int argi = 2; argi < argc; argi++) {
+			switch (argv[argi][0]) {
+			case '-':
+				for (int i=1; i<strlen(argv[argi]); i++) {
+					int bit = argv[argi][i] - '1';
+					printf("Relais %d off\n", bit+1);
+					state &= ~(1<<bit);
+				}
+				break;
+			case '=':
+				state = 0;
+				printf("All off\n");
+				// fall through:
+			case '+':
+				for (int i=1; i<strlen(argv[argi]); i++) {
+					int bit = argv[argi][i] - '1';
+					printf("Relais %d on\n", bit+1);
+					state |= 1<<bit;
+				}
+				break;
+			default:
+				fprintf(stderr, "Wrong argument.\n");
+				exit(8);
+				break;
+			}
+		}
+		if (send_set(fd, buf, port, state) == NULL) {
+			exit(9);
+		}
 	}
 	exit(0);
 }
